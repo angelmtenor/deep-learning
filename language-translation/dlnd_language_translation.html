@@ -12371,8 +12371,8 @@ Default GPU Device: /gpu:0
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># TODO: Implement Function</span>
     
-    <span class="c1"># Dropout also applied to decoder RNN    </span>
-    <span class="n">dec_cell</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">rnn</span><span class="o">.</span><span class="n">DropoutWrapper</span><span class="p">(</span><span class="n">dec_cell</span><span class="p">,</span> <span class="n">output_keep_prob</span><span class="o">=</span><span class="n">keep_prob</span><span class="p">)</span> 
+    <span class="c1"># Reviewer hint: There is no need to apply dropout here since it doesn&#39;t matter for inference</span>
+    <span class="c1"># dec_cell = tf.contrib.rnn.DropoutWrapper(dec_cell, output_keep_prob=keep_prob) </span>
     
     <span class="n">infer_decoder_fn</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">seq2seq</span><span class="o">.</span><span class="n">simple_decoder_fn_inference</span><span class="p">(</span><span class="n">output_fn</span><span class="p">,</span> <span class="n">encoder_state</span><span class="p">,</span> <span class="n">dec_embeddings</span><span class="p">,</span>
                                                                       <span class="n">start_of_sequence_id</span><span class="p">,</span> <span class="n">end_of_sequence_id</span><span class="p">,</span>
@@ -12455,11 +12455,10 @@ Default GPU Device: /gpu:0
         <span class="n">output_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">scope</span><span class="o">=</span><span class="n">decoding_scope</span><span class="p">)</span>        
         
     <span class="c1"># Dropout applied to decoding_layer_train function</span>
-    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;decoding&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">decoding_scope</span><span class="p">:</span>    
         <span class="n">train_logits</span> <span class="o">=</span> <span class="n">decoding_layer_train</span><span class="p">(</span><span class="n">encoder_state</span><span class="p">,</span> <span class="n">dec_cell</span><span class="p">,</span> <span class="n">dec_embed_input</span><span class="p">,</span> <span class="n">sequence_length</span><span class="p">,</span> 
                                           <span class="n">decoding_scope</span><span class="p">,</span> <span class="n">output_fn</span><span class="p">,</span> <span class="n">keep_prob</span><span class="p">)</span> 
     
-    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">variable_scope</span><span class="p">(</span><span class="s2">&quot;decoding&quot;</span><span class="p">,</span> <span class="n">reuse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">as</span> <span class="n">decoding_scope</span><span class="p">:</span>
+        <span class="n">decoding_scope</span><span class="o">.</span><span class="n">reuse_variables</span><span class="p">()</span>
         <span class="n">inference_logits</span> <span class="o">=</span>  <span class="n">decoding_layer_infer</span><span class="p">(</span><span class="n">encoder_state</span><span class="p">,</span> <span class="n">dec_cell</span><span class="p">,</span> <span class="n">dec_embeddings</span><span class="p">,</span>
                                                  <span class="n">target_vocab_to_int</span><span class="p">[</span><span class="s1">&#39;&lt;GO&gt;&#39;</span><span class="p">],</span>
                                                  <span class="n">target_vocab_to_int</span><span class="p">[</span><span class="s1">&#39;&lt;EOS&gt;&#39;</span><span class="p">],</span> <span class="n">sequence_length</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> 
@@ -12699,69 +12698,70 @@ Default GPU Device: /gpu:0
 <div class="prompt input_prompt">In&nbsp;[16]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">DON&#39;T MODIFY ANYTHING IN THIS CELL</span>
-<span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">import</span> <span class="nn">time</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="o">%%</span><span class="k">time</span>
+&quot;&quot;&quot;
+DON&#39;T MODIFY ANYTHING IN THIS CELL
+&quot;&quot;&quot;
+import time
 
-<span class="k">def</span> <span class="nf">get_accuracy</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">logits</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Calculate accuracy</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">max_seq</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">logits</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-    <span class="k">if</span> <span class="n">max_seq</span> <span class="o">-</span> <span class="n">target</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-        <span class="n">target</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span>
-            <span class="n">target_batch</span><span class="p">,</span>
-            <span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="n">max_seq</span> <span class="o">-</span> <span class="n">target_batch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)],</span>
-            <span class="s1">&#39;constant&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">max_seq</span> <span class="o">-</span> <span class="n">batch_train_logits</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-        <span class="n">logits</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span>
-            <span class="n">logits</span><span class="p">,</span>
-            <span class="p">[(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">),(</span><span class="mi">0</span><span class="p">,</span><span class="n">max_seq</span> <span class="o">-</span> <span class="n">logits</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)],</span>
-            <span class="s1">&#39;constant&#39;</span><span class="p">)</span>
+def get_accuracy(target, logits):
+    &quot;&quot;&quot;
+    Calculate accuracy
+    &quot;&quot;&quot;
+    max_seq = max(target.shape[1], logits.shape[1])
+    if max_seq - target.shape[1]:
+        target = np.pad(
+            target_batch,
+            [(0,0),(0,max_seq - target_batch.shape[1]), (0,0)],
+            &#39;constant&#39;)
+    if max_seq - batch_train_logits.shape[1]:
+        logits = np.pad(
+            logits,
+            [(0,0),(0,max_seq - logits.shape[1]), (0,0)],
+            &#39;constant&#39;)
 
-    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">logits</span><span class="p">,</span> <span class="mi">2</span><span class="p">)))</span>
+    return np.mean(np.equal(target, np.argmax(logits, 2)))
 
-<span class="n">train_source</span> <span class="o">=</span> <span class="n">source_int_text</span><span class="p">[</span><span class="n">batch_size</span><span class="p">:]</span>
-<span class="n">train_target</span> <span class="o">=</span> <span class="n">target_int_text</span><span class="p">[</span><span class="n">batch_size</span><span class="p">:]</span>
+train_source = source_int_text[batch_size:]
+train_target = target_int_text[batch_size:]
 
-<span class="n">valid_source</span> <span class="o">=</span> <span class="n">helper</span><span class="o">.</span><span class="n">pad_sentence_batch</span><span class="p">(</span><span class="n">source_int_text</span><span class="p">[:</span><span class="n">batch_size</span><span class="p">])</span>
-<span class="n">valid_target</span> <span class="o">=</span> <span class="n">helper</span><span class="o">.</span><span class="n">pad_sentence_batch</span><span class="p">(</span><span class="n">target_int_text</span><span class="p">[:</span><span class="n">batch_size</span><span class="p">])</span>
+valid_source = helper.pad_sentence_batch(source_int_text[:batch_size])
+valid_target = helper.pad_sentence_batch(target_int_text[:batch_size])
 
-<span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">train_graph</span><span class="p">)</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
-    <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">())</span>
+with tf.Session(graph=train_graph) as sess:
+    sess.run(tf.global_variables_initializer())
 
-    <span class="k">for</span> <span class="n">epoch_i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epochs</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">batch_i</span><span class="p">,</span> <span class="p">(</span><span class="n">source_batch</span><span class="p">,</span> <span class="n">target_batch</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
-                <span class="n">helper</span><span class="o">.</span><span class="n">batch_data</span><span class="p">(</span><span class="n">train_source</span><span class="p">,</span> <span class="n">train_target</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">)):</span>
-            <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    for epoch_i in range(epochs):
+        for batch_i, (source_batch, target_batch) in enumerate(
+                helper.batch_data(train_source, train_target, batch_size)):
+            start_time = time.time()
             
-            <span class="n">_</span><span class="p">,</span> <span class="n">loss</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-                <span class="p">[</span><span class="n">train_op</span><span class="p">,</span> <span class="n">cost</span><span class="p">],</span>
-                <span class="p">{</span><span class="n">input_data</span><span class="p">:</span> <span class="n">source_batch</span><span class="p">,</span>
-                 <span class="n">targets</span><span class="p">:</span> <span class="n">target_batch</span><span class="p">,</span>
-                 <span class="n">lr</span><span class="p">:</span> <span class="n">learning_rate</span><span class="p">,</span>
-                 <span class="n">sequence_length</span><span class="p">:</span> <span class="n">target_batch</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-                 <span class="n">keep_prob</span><span class="p">:</span> <span class="n">keep_probability</span><span class="p">})</span>
+            _, loss = sess.run(
+                [train_op, cost],
+                {input_data: source_batch,
+                 targets: target_batch,
+                 lr: learning_rate,
+                 sequence_length: target_batch.shape[1],
+                 keep_prob: keep_probability})
             
-            <span class="n">batch_train_logits</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-                <span class="n">inference_logits</span><span class="p">,</span>
-                <span class="p">{</span><span class="n">input_data</span><span class="p">:</span> <span class="n">source_batch</span><span class="p">,</span> <span class="n">keep_prob</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">})</span>
-            <span class="n">batch_valid_logits</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
-                <span class="n">inference_logits</span><span class="p">,</span>
-                <span class="p">{</span><span class="n">input_data</span><span class="p">:</span> <span class="n">valid_source</span><span class="p">,</span> <span class="n">keep_prob</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">})</span>
+            batch_train_logits = sess.run(
+                inference_logits,
+                {input_data: source_batch, keep_prob: 1.0})
+            batch_valid_logits = sess.run(
+                inference_logits,
+                {input_data: valid_source, keep_prob: 1.0})
                 
-            <span class="n">train_acc</span> <span class="o">=</span> <span class="n">get_accuracy</span><span class="p">(</span><span class="n">target_batch</span><span class="p">,</span> <span class="n">batch_train_logits</span><span class="p">)</span>
-            <span class="n">valid_acc</span> <span class="o">=</span> <span class="n">get_accuracy</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">valid_target</span><span class="p">),</span> <span class="n">batch_valid_logits</span><span class="p">)</span>
-            <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">batch_i</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Epoch </span><span class="si">{:&gt;3}</span><span class="s1"> Batch </span><span class="si">{:&gt;4}</span><span class="s1">/</span><span class="si">{}</span><span class="s1"> - Train Accuracy: </span><span class="si">{:&gt;6.3f}</span><span class="s1">, Validation Accuracy: </span><span class="si">{:&gt;6.3f}</span><span class="s1">, Loss: </span><span class="si">{:&gt;6.3f}</span><span class="s1">&#39;</span>
-                  <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">epoch_i</span><span class="p">,</span> <span class="n">batch_i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">source_int_text</span><span class="p">)</span> <span class="o">//</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">train_acc</span><span class="p">,</span> <span class="n">valid_acc</span><span class="p">,</span> <span class="n">loss</span><span class="p">))</span>
+            train_acc = get_accuracy(target_batch, batch_train_logits)
+            valid_acc = get_accuracy(np.array(valid_target), batch_valid_logits)
+            end_time = time.time()
+            if batch_i % 200 == 0:
+                print(&#39;Epoch {:&gt;3} Batch {:&gt;4}/{} - Train Accuracy: {:&gt;6.3f}, Validation Accuracy: {:&gt;6.3f}, Loss: {:&gt;6.3f}&#39;
+                  .format(epoch_i, batch_i, len(source_int_text) // batch_size, train_acc, valid_acc, loss))
 
-    <span class="c1"># Save Model</span>
-    <span class="n">saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">()</span>
-    <span class="n">saver</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">save_path</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Model Trained and Saved&#39;</span><span class="p">)</span>
+    # Save Model
+    saver = tf.train.Saver()
+    saver.save(sess, save_path)
+    print(&#39;Model Trained and Saved&#39;)
 </pre></div>
 
 </div>
@@ -12776,29 +12776,21 @@ Default GPU Device: /gpu:0
 <div class="prompt"></div>
 
 <div class="output_subarea output_stream output_stdout output_text">
-<pre>Epoch   0 Batch    0/1077 - Train Accuracy:  0.294, Validation Accuracy:  0.305, Loss:  5.847
-Epoch   0 Batch  100/1077 - Train Accuracy:  0.516, Validation Accuracy:  0.540, Loss:  1.064
-Epoch   0 Batch  200/1077 - Train Accuracy:  0.567, Validation Accuracy:  0.599, Loss:  0.706
-Epoch   0 Batch  300/1077 - Train Accuracy:  0.738, Validation Accuracy:  0.709, Loss:  0.500
-Epoch   0 Batch  400/1077 - Train Accuracy:  0.770, Validation Accuracy:  0.772, Loss:  0.362
-Epoch   0 Batch  500/1077 - Train Accuracy:  0.875, Validation Accuracy:  0.838, Loss:  0.244
-Epoch   0 Batch  600/1077 - Train Accuracy:  0.891, Validation Accuracy:  0.868, Loss:  0.179
-Epoch   0 Batch  700/1077 - Train Accuracy:  0.916, Validation Accuracy:  0.889, Loss:  0.126
-Epoch   0 Batch  800/1077 - Train Accuracy:  0.884, Validation Accuracy:  0.904, Loss:  0.113
-Epoch   0 Batch  900/1077 - Train Accuracy:  0.916, Validation Accuracy:  0.910, Loss:  0.100
-Epoch   0 Batch 1000/1077 - Train Accuracy:  0.904, Validation Accuracy:  0.893, Loss:  0.078
-Epoch   1 Batch    0/1077 - Train Accuracy:  0.917, Validation Accuracy:  0.906, Loss:  0.064
-Epoch   1 Batch  100/1077 - Train Accuracy:  0.934, Validation Accuracy:  0.940, Loss:  0.066
-Epoch   1 Batch  200/1077 - Train Accuracy:  0.921, Validation Accuracy:  0.924, Loss:  0.061
-Epoch   1 Batch  300/1077 - Train Accuracy:  0.945, Validation Accuracy:  0.928, Loss:  0.047
-Epoch   1 Batch  400/1077 - Train Accuracy:  0.944, Validation Accuracy:  0.931, Loss:  0.058
-Epoch   1 Batch  500/1077 - Train Accuracy:  0.945, Validation Accuracy:  0.941, Loss:  0.041
-Epoch   1 Batch  600/1077 - Train Accuracy:  0.946, Validation Accuracy:  0.939, Loss:  0.050
-Epoch   1 Batch  700/1077 - Train Accuracy:  0.948, Validation Accuracy:  0.950, Loss:  0.034
-Epoch   1 Batch  800/1077 - Train Accuracy:  0.953, Validation Accuracy:  0.943, Loss:  0.040
-Epoch   1 Batch  900/1077 - Train Accuracy:  0.953, Validation Accuracy:  0.951, Loss:  0.043
-Epoch   1 Batch 1000/1077 - Train Accuracy:  0.943, Validation Accuracy:  0.952, Loss:  0.037
+<pre>Epoch   0 Batch    0/1077 - Train Accuracy:  0.294, Validation Accuracy:  0.305, Loss:  5.938
+Epoch   0 Batch  200/1077 - Train Accuracy:  0.562, Validation Accuracy:  0.609, Loss:  0.705
+Epoch   0 Batch  400/1077 - Train Accuracy:  0.786, Validation Accuracy:  0.773, Loss:  0.353
+Epoch   0 Batch  600/1077 - Train Accuracy:  0.894, Validation Accuracy:  0.843, Loss:  0.163
+Epoch   0 Batch  800/1077 - Train Accuracy:  0.897, Validation Accuracy:  0.896, Loss:  0.109
+Epoch   0 Batch 1000/1077 - Train Accuracy:  0.907, Validation Accuracy:  0.910, Loss:  0.068
+Epoch   1 Batch    0/1077 - Train Accuracy:  0.935, Validation Accuracy:  0.898, Loss:  0.060
+Epoch   1 Batch  200/1077 - Train Accuracy:  0.925, Validation Accuracy:  0.930, Loss:  0.053
+Epoch   1 Batch  400/1077 - Train Accuracy:  0.927, Validation Accuracy:  0.917, Loss:  0.057
+Epoch   1 Batch  600/1077 - Train Accuracy:  0.960, Validation Accuracy:  0.941, Loss:  0.042
+Epoch   1 Batch  800/1077 - Train Accuracy:  0.943, Validation Accuracy:  0.937, Loss:  0.038
+Epoch   1 Batch 1000/1077 - Train Accuracy:  0.968, Validation Accuracy:  0.938, Loss:  0.028
 Model Trained and Saved
+CPU times: user 3min 49s, sys: 27.2 s, total: 4min 16s
+Wall time: 3min 59s
 </pre>
 </div>
 </div>
@@ -12914,14 +12906,8 @@ Model Trained and Saved
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># TODO: Implement Function</span>
     
-    <span class="n">word_ids</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">sentence</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">vocab_to_int</span><span class="p">:</span>
-            <span class="n">word_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vocab_to_int</span><span class="p">[</span><span class="n">word</span><span class="p">])</span>
-        <span class="k">else</span><span class="p">:</span>
-             <span class="n">word_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vocab_to_int</span><span class="p">[</span><span class="s1">&#39;&lt;UNK&gt;&#39;</span><span class="p">])</span>
-    
-    <span class="k">return</span> <span class="n">word_ids</span>
+    <span class="c1"># reviewer improvement:</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">vocab_to_int</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="n">vocab_to_int</span><span class="p">[</span><span class="s1">&#39;&lt;UNK&gt;&#39;</span><span class="p">])</span> <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">sentence</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
     
 
 <span class="sd">&quot;&quot;&quot;</span>
@@ -13008,12 +12994,12 @@ Model Trained and Saved
 
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>Input
-  Word Ids:      [163, 13, 116, 142, 205, 32, 58]
+  Word Ids:      [113, 97, 193, 162, 46, 206, 143]
   English Words: [&#39;he&#39;, &#39;saw&#39;, &#39;a&#39;, &#39;old&#39;, &#39;yellow&#39;, &#39;truck&#39;, &#39;.&#39;]
 
 Prediction
-  Word Ids:      [133, 142, 130, 273, 276, 58, 285, 1]
-  French Words: [&#39;il&#39;, &#39;a&#39;, &#39;vu&#39;, &#39;un&#39;, &#39;camion&#39;, &#39;jaune&#39;, &#39;.&#39;, &#39;&lt;EOS&gt;&#39;]
+  Word Ids:      [72, 346, 52, 91, 166, 311, 227, 1]
+  French Words: [&#39;il&#39;, &#39;a&#39;, &#39;vu&#39;, &#39;un&#39;, &#39;vieux&#39;, &#39;camion&#39;, &#39;.&#39;, &#39;&lt;EOS&gt;&#39;]
 </pre>
 </div>
 </div>
